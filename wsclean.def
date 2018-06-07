@@ -1,0 +1,73 @@
+Bootstrap: debootstrap
+MirrorURL: http://ftp.leg.uct.ac.za/ubuntu/
+OSVersion: xenial
+Include: software-properties-common
+
+%environment
+LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH PATH
+
+%post
+   	apt-get update
+	apt-get install -y wget apt-utils apt-transport-https git vim
+	add-apt-repository -s ppa:kernsuite/kern-3
+        apt-add-repository multiverse
+
+	apt-get update
+
+	# Packages
+	apt-get install -y casacore-dev libcfitsio-dev libcfitsio2 libboost-all-dev libgsl2 libgsl-dev liblapacke liblapacke-dev \
+		cmake g++ cmake-curses-gui libfftw3-dev libfftw3-3 lofar-dev python-pkgconfig g++
+
+	# Create bind points for CUDA mapping in order to eliminate the following warnings:
+	# WARNING: Non existent bind point (directory) in container: '/usr/local/cuda'
+	# WARNING: Skipping user bind, non existent bind point (file) in container: '/bin/nvidia-smi'
+	mkdir -p /usr/local/cuda
+	touch /bin/nvidia-smi
+
+	# Avoid timezone issue
+	touch /etc/timezone
+
+	# Create /users to bind home directories into the container.
+	mkdir -p /users /scratch /data
+
+	# Cleanup 
+	apt-get clean
+	apt-get autoclean
+
+	cat > /first-run.sh <<EOF;
+#!/bin/bash
+# Build packages from source
+mkdir /build
+CORES=`nproc`
+
+## IDG
+#export LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH
+#export PATH=/usr/local/cuda/bin:\$PATH
+cd /build
+git clone --recursive https://gitlab.com/astron-idg/idg
+cd idg/idg-lib
+git pull origin master
+cd ../idg-api
+git pull origin master
+cd ..
+mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+cmake -DBUILD_LIB_CUDA=ON .
+cmake .
+make -j \$CORES
+make install
+
+## wsclean
+cd /build
+wget -q -O- 'https://downloads.sourceforge.net/project/wsclean/wsclean-2.5/wsclean-2.5.tar.bz2?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwsclean%2Ffiles%2Flatest%2Fdownload&ts=1522848163&use_mirror=tenet' | tar -jxv
+cd wsclean-2.5/
+mkdir -p build
+cd build
+cmake ..
+make -j \$CORES
+make install
+EOF
+	chmod +x /first-run.sh
+
