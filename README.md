@@ -23,6 +23,17 @@ singularity shell --nv wsclean-gpu.simg
 `/usr/local/cuda` and that this path has been bound into the container as this binds
 in a more complete set of libraries than adding the `--nv` parameter adds
 
+> **Note**: a wiki page describe the Image-Domain Gridder is available
+[here](https://sourceforge.net/p/wsclean/wiki/ImageDomainGridder/).
+
+When running the Image-Domain Gridder, the `CUDA_DEVICE` environment variable will
+control which GPUs are used.  e.g. if you `export CUDA_DEVICE=0,1` this will result
+in the first two GPUs being used.
+
+The gridder uses OpenMP for parallelism on the CPU in hybrid and CPU mode, so if not
+on a dedicated machine you can set the `OMP_NUM_THREADS` environment variable to limit
+the number of CPU threads used. 
+
 Build instructions
 ==================
 
@@ -49,3 +60,4 @@ sudo singularity exec $SAND rm /first-run.sh
 sudo singularity build wsclean-gpu.simg $SAND
 sudo rm -r $SAND
 ```
+

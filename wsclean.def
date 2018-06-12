@@ -61,8 +61,8 @@ make install
 
 ## wsclean
 cd /build
-wget -q -O- 'https://downloads.sourceforge.net/project/wsclean/wsclean-2.5/wsclean-2.5.tar.bz2?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwsclean%2Ffiles%2Flatest%2Fdownload&ts=1522848163&use_mirror=tenet' | tar -jxv
-cd wsclean-2.5/
+wget -q -O- 'https://downloads.sourceforge.net/project/wsclean/wsclean-2.6/wsclean-2.6.tar.bz2?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwsclean%2Ffiles%2Flatest%2Fdownload%3Fsource%3Dfiles&ts=1528792480' | tar -jxv
+cd wsclean-2.6/
 mkdir -p build
 cd build
 cmake ..
