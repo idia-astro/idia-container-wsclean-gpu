@@ -2,9 +2,36 @@ This container contains a build of [wsclean](https://sourceforge.net/projects/ws
 with [ASTRON IDG](https://gitlab.com/astron-idg/idg) integrated to enable the container
 to utilize GPUs for acceleration.
 
-Note that this container assume that CUDA has been installed in
+Launching the container
+=======================
+
+The process for launching the wsclean + IDG container is a bit more involved than
+that for launching the other containers due to the need to ensure that the kernel
+modules are loaded and libraries linked in.
+
+```
+# Triggers the loading of all the needed NVIDIA kernel modules
+# (should be replaced by use of `nvidia-modprobe` at some point but IIRC
+#  `nvidia-modprobe` doesn't load all drivers with default params)
+/usr/local/cuda/extras/demo_suite/bandwidthTest &> /dev/null
+
+# Launch the container itself
+singularity shell --nv wsclean-gpu.simg
+```
+
+> **Note**: that this container assume that CUDA has been installed in
 `/usr/local/cuda` and that this path has been bound into the container as this binds
-in a more complete set of libraries.
+in a more complete set of libraries than adding the `--nv` parameter adds
+
+Build instructions
+==================
+
+First install CUDA using the packages available [here](https://developer.nvidia.com/cuda-downloads)
+and then add the following line to `/etc/singularity/singularity.conf`:
+
+```
+bind path = /usr/local/cuda
+```
 
 The build process for this container is slight different from the typical singularity
 build process as the CUDA libraries are not bound into the container at the type of
