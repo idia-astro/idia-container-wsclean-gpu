@@ -16,7 +16,7 @@ modules are loaded and libraries linked in.
 /usr/local/cuda/extras/demo_suite/bandwidthTest &> /dev/null
 
 # Launch the container itself
-singularity shell --nv wsclean-gpu.simg
+singularity shell wsclean-gpu.simg
 ```
 
 > **Note**: that this container assume that CUDA has been installed in
@@ -55,8 +55,8 @@ The build can be done using a sequence of commands like the following:
 ```
 SAND=${RANDOM}.sandbox
 sudo singularity build --sandbox $SAND wsclean.def
-sudo singularity exec --nv --writable $SAND /first-run.sh
-sudo singularity exec $SAND rm /first-run.sh
+sudo singularity exec --nv --writable $SAND /opt/build/first-run.sh
+sudo singularity exec $SAND rm /opt/build/first-run.sh
 sudo singularity build wsclean-gpu.simg $SAND
 sudo rm -r $SAND
 ```
