@@ -1,89 +1,114 @@
 Bootstrap: debootstrap
 MirrorURL: http://archive.ubuntu.com/ubuntu/
-OSVersion: bionic
-Include: software-properties-common
+OSVersion: focal
 
 %labels
 
-    	APPLICATION_NAME Ubuntu LTS + Nvidia CUDA + wsclean
-    	OS_VERSION 18.04 + 11.4.2 
-    	APPLICATION_URL https://developer.nvidia.com/cuda-zone 
+	APPLICATION_NAME Ubuntu LTS + Nvidia CUDA + wsclean
+	OS_VERSION 20.04 + 11.7.0 
+	APPLICATION_URL https://developer.nvidia.com/cuda-zone 
 
-    	SYSTEM_NAME iLifu
-    	SYSTEM_SINGULARITY_VERSION 2.6.1
-    	SYSTEM_URL http://www.ilifu.ac.za
+	SYSTEM_NAME iLifu
+	SYSTEM_SINGULARITY_VERSION 2.6.1
+	SYSTEM_URL http://www.ilifu.ac.za
 
-    	AUTHOR_NAME Jeremy Smith
-    	AUTHOR_EMAIL jeremy@idia.ac.za
+	AUTHOR_NAME Jeremy Smith
+	AUTHOR_EMAIL jeremy@idia.ac.za
 
 %environment
 
-    	# Set system locale
-    	export LC_ALL=C
-    
-    	# Nvidia CUDA Path
-    	export CPATH="/usr/local/cuda/include:$CPATH"
-    	export PATH="/usr/local/cuda/bin:$PATH"
-    	export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/:/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
-    	export CUDA_HOME="/usr/local/cuda"
+	# Set system locale
+	export LC_ALL=C
+
+	# Nvidia CUDA Path
+	export CPATH="/usr/local/cuda/include:$CPATH"
+	export PATH="/usr/local/cuda/bin:$PATH"
+	export PYTHONPATH="$PYTHONPATH:/opt/build/EveryBeam/lib/python3.8/dist-packages"
+	export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/:/usr/local/cuda/lib64:/opt/build/EveryBeam/lib:$LD_LIBRARY_PATH"
+	export CUDA_HOME="/usr/local/cuda"
 
 %post
 
-    	##############################################################################
-    	# Setting up Environment  
-    	
+	##############################################################################
+	# Setting up Environment  
+	
 	# Nvidia CUDA Path
-    	export CPATH="/usr/local/cuda/include:$CPATH"
-   	export PATH="/usr/local/cuda/bin:$PATH"
-    	export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/:/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
-    	export CUDA_HOME="/usr/local/cuda"
-    	###############################################################################
+	export CPATH="/usr/local/cuda/include:$CPATH"
+	export PATH="/usr/local/cuda/bin:$PATH"
+	export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/:/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+	export CUDA_HOME="/usr/local/cuda"
 
-   	# Update Ubuntu Cache and begin install
-    	apt update -y
-    	apt install -y wget gcc libxml2 curl gpg-agent build-essential
+	# Fix command prompt in Singularity 3.5.2
+printf 'export PS1="\u@$SINGULARITY_NAME:\w$ "' > /.singularity.d/env/999-psvars.sh
+	###############################################################################
+
+	# Update Ubuntu Cache and begin install
+	
+	apt update -y
+	apt-get install -y software-properties-common
+	apt-get install -y wget gcc libxml2 curl gpg-agent build-essential
 
 	apt-get update
-	apt-get install -y wget apt-utils apt-transport-https git vim
-	apt-add-repository -s ppa:kernsuite/kern-6
-        apt-add-repository multiverse
+	apt-get install -y apt-utils apt-transport-https git vim
+	apt-add-repository -s ppa:kernsuite/kern-7
+	apt-add-repository multiverse
 	apt-get update
 
 	# Packages
-	apt-get install -y casacore-dev libgsl-dev libhdf5-dev libfftw3-dev libboost-dev libboost-date-time-dev libboost-filesystem-dev libboost-program-options-dev libboost-system-dev libboost-thread-dev libcfitsio-dev cmake g++ libblas-dev liblapack-dev python3 libpython3-dev python3-distutils
-    	
-	#Create /usr/local/cuda for binding
-	mkdir -p /usr/local/cuda-11.4        
+	apt-get install -y casacore-dev libgsl-dev libhdf5-dev libfftw3-dev libboost-dev libboost-date-time-dev libboost-filesystem-dev libboost-program-options-dev libboost-system-dev libboost-thread-dev libcfitsio-dev cmake g++ libblas-dev liblapack-dev python3 libpython3-dev python3-distutils python-is-python3
 
-	# Clean Up
-        apt clean
-        apt autoclean
-        apt autoremove -y
-        rm -rf "/.cache" "/root/.cache"
-
-        # Create first-run script to complete installation
+	# Install EveryBeam
+	# EveryBeam dependencies https://everybeam.readthedocs.io/en/latest/build-instructions.html
+	apt-get -y install wget git make cmake g++ doxygen libboost-all-dev libhdf5-dev libfftw3-dev libblas-dev liblapack-dev libgsl-dev libxml2-dev libgtkmm-3.0-dev libpython3-dev python3-distutils
+	apt-get -y install casacore-dev libcfitsio-dev wcslib-dev
+	apt-get install -y python3-pip
 	mkdir -p /opt/build
-        cat > /opt/build/first-run.sh <<EOF;	
+	cd /opt/build
+	pip3 install sphinx sphinx_rtd_theme breathe myst-parser
+	export GIT_SSL_NO_VERIFY=1
+	git clone --recursive -j4 https://git.astron.nl/RD/EveryBeam.git
+	cd EveryBeam
+	mkdir build && cd build
+	cmake -DCMAKE_INSTALL_PREFIX=/opt/build/EveryBeam ..
+	cmake -DBUILD_WITH_PYTHON=On .
+	make install
+	
+	#Create /usr/local/cuda for binding
+	mkdir -p /usr/local/cuda-11.4
+	
+	# Clean Up
+	apt clean
+	apt autoclean
+	apt autoremove -y
+	rm -rf "/.cache" "/root/.cache"
+
+	# Create first-run script to complete installation
+	cat > /opt/build/first-run.sh <<EOF;    
 #!/bin/bash
 export IDGAPI_DIR=/usr/local/idg
+export GIT_SSL_NO_VERIFY=1
 cd /opt/build
 ln -s /usr/local/cuda-11.4 /usr/local/cuda
+for LIB in \$(ls /.singularity.d/libs); do ln -s /.singularity.d/libs/\$LIB /usr/lib/x86_64-linux-gnu/\$LIB; done
 git clone https://gitlab.com/astron-idg/idg.git
-cd idg && mkdir build && cd build
+cd idg
+mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/local/idg/ ..
 cmake -DBUILD_LIB_CUDA=ON . 
 make -j 4
 make install
 
+mkdir /include
 cd /opt/build
 git clone https://gitlab.com/aroffringa/wsclean.git
 cd wsclean
 git submodule update --init --recursive
 mkdir -p build
 cd build
-cmake -DPORTABLE=Yes -DIDGAPI_DIR=/usr/local/idg ..
+cmake -DPORTABLE=Yes -DIDGAPI_DIR=/usr/local/idg -DEveryBeam_DIR=/opt/build/EveryBeam/lib/everybeam ../
 make -j 4
 make install
 EOF
 
 	chmod +x /opt/build/first-run.sh
+
