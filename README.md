@@ -45,7 +45,7 @@ bind path = /usr/local/cuda
 ```
 
 The build process for this container is slight different from the typical singularity
-build process as the CUDA libraries are not bound into the container at the type of
+build process as the CUDA libraries are not bound into the container at the time of
 the initial build.  Thus first a writeable sandbox must be built, a `first-run.sh`
 script executed to build the application, and then the sandbox converted into a
 standard image.
